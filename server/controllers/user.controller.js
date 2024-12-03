@@ -213,17 +213,35 @@ export async function logoutController(request,response){
 //upload user avatar
 export async  function uploadAvatar(request,response){
     try {
-        const userId = request.userId // auth middlware
+        const userId = request.body.userId // auth middlware
         const image = request.file  // multer middleware
 
-        const upload = await uploadImageClodinary(image)
-        
-        const updateUser = await UserModel.findByIdAndUpdate(userId,{
-            avatar : upload.url
-        })
+        if (!image) {
+            return res.status(400).json({
+                message: "No file uploaded",
+                error: true,
+                success: false
+            });
+        }
+
+        const avatarUrl = `/uploads/${image.filename}`;
+        //const upload = await uploadImageClodinary(image)
+       
+
+        const updateUser = await UserModel.findByIdAndUpdate(userId, {
+            avatar: avatarUrl
+        }, { new: true });
+
+        if (!updateUser) {
+            return res.status(404).json({
+                message: "User not found",
+                error: true,
+                success: false
+            });
+        }
 
         return response.json({
-            message : "upload profile",
+            message: "Profile uploaded successfully",
             success : true,
             error : false,
             data : {
@@ -244,7 +262,7 @@ export async  function uploadAvatar(request,response){
 //update user details
 export async function updateUserDetails(request,response){
     try {
-        const userId = request.userId //auth middleware
+        const userId = request.body.userId //auth middleware
         const { name, email, mobile, password } = request.body 
 
         let hashPassword = ""
@@ -254,6 +272,7 @@ export async function updateUserDetails(request,response){
             hashPassword = await bcryptjs.hash(password,salt)
         }
 
+      
         const updateUser = await UserModel.updateOne({ _id : userId},{
             ...(name && { name : name }),
             ...(email && { email : email }),
@@ -498,9 +517,7 @@ export async function refreshToken(request,response){
 //get login user details
 export async function userDetails(request,response){
     try {
-        const userId  = request.userId
-
-        console.log(userId)
+        const userId  = request.body.userId
 
         const user = await UserModel.findById(userId).select('-password -refresh_token')
 
